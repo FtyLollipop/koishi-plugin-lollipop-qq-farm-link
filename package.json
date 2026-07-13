@@ -1,0 +1,39 @@
+{
+  "name": "koishi-plugin-lollipop-qq-farm-link",
+  "description": "A Koishi plugin for binding and sending QQ Classic Farm links",
+  "version": "0.0.1",
+  "main": "index.js",
+  "contributors": [
+    "FtyLollipop <ftylollipop@outlook.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/FtyLollipop/koishi-plugin-lollipop-qq-farm-link",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FtyLollipop/koishi-plugin-lollipop-qq-farm-link.git"
+  },
+  "scripts": {},
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "qq farm",
+    "qq classic farm"
+  ],
+  "devDependencies": {},
+  "koishi": {
+    "description": {
+      "en": "A Koishi plugin for binding and sending QQ Classic Farm links",
+      "zh": "用户可绑定QQ经典农场链接，发送链接后点击快速跳转到相应用户的农场中"
+    },
+    "service": {
+      "required": [
+        "database"
+      ]
+    },
+    "preview": true
+  },
+  "peerDependencies": {
+    "koishi": "^4.18.7"
+  }
+}
