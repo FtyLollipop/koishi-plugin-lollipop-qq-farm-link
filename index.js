@@ -5,6 +5,7 @@ const UserManager = require("./services/user-manager")
 const GroupManager = require("./services/group-manager")
 const { registerCommands } = require("./commands/commands");
 const { registerEvents } = require("./events/events");
+const { group } = require("node:console");
 
 const name = "koishi-plugin-lollipop-qq-farm-link";
 const inject = ["database"];
@@ -22,6 +23,7 @@ const defaultConfig = {
   urlPrefix: "m.q.qq.com/a/s/",
   groupDefaultEnableKeywordTrigger: true,
   groupDefaultEnableAt: true,
+  groupDefaultEnableAtAll: false,
 };
 
 const Config = Schema.intersect([
@@ -34,7 +36,7 @@ const Config = Schema.intersect([
       .description("是否启用关键词触发"),
     enableAt: Schema.boolean()
       .default(defaultConfig.enableAt)
-      .description("是否启用at订阅用户"),
+      .description("是否启用at订阅用户/所有群员"),
     keywordsLimit: Schema.number()
       .default(defaultConfig.keywordsLimit)
       .description("每用户关键词数量限制"),
@@ -64,6 +66,9 @@ const Config = Schema.intersect([
     groupDefaultEnableAt: Schema.boolean()
       .default(defaultConfig.groupDefaultEnableAt)
       .description("是否启用at订阅用户"),
+    groupDefaultEnableAtAll: Schema.boolean()
+      .default(defaultConfig.groupDefaultEnableAtAll)
+      .description("是否启用忽略订阅列表at所有群员"),
   }).description("群聊默认设置"),
 ])
 

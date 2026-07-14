@@ -384,7 +384,7 @@ function registerCommands() {
       }
 
       const keywords = store.userManager.getUser(argv.session.platform, targetUserId)?.keywords;
-      if(!keywords || index < 1 || index > keywords.length) {
+      if(!index || !keywords || index < 1 || index > keywords.length) {
         replyMessage(argv.session, "无效的关键词序号");
         return;
       }
@@ -576,10 +576,12 @@ function registerCommands() {
       const groupSettings = {
         enableKeywordTrigger: "",
         enableAt: "",
+        enableAtAll: "",
       }
       if(groupEntry) {
         groupSettings.enableKeywordTrigger = groupEntry.settings?.enableKeywordTrigger || "";
         groupSettings.enableAt = groupEntry.settings?.enableAt || "";
+        groupSettings.enableAtAll = groupEntry.settings?.enableAtAll || "";
       }
       replyMessage(
         argv.session,
@@ -587,13 +589,15 @@ function registerCommands() {
           groupSettings.enableKeywordTrigger === "" ? `默认(${store.config.groupDefaultEnableKeywordTrigger ? "启用" : "禁用"})` : groupSettings.enableKeywordTrigger === "0" ? "禁用" : "启用"
         }\nenableAt(at订阅用户): ${
           groupSettings.enableAt === "" ? `默认(${store.config.groupDefaultEnableAt ? "启用" : "禁用"})` : groupSettings.enableAt === "0" ? "禁用" : "启用"
+        }\nenableAtAll(忽略订阅用户列表at所有人): ${
+          groupSettings.enableAtAll === "" ? `默认(${store.config.groupDefaultEnableAtAll ? "启用" : "禁用"})` : groupSettings.enableAtAll === "0" ? "禁用" : "启用"
         }`);
     });
 
   // 更改群聊设置
   store.ctx
     .command("qq-farm-link.group.settings.set <key:string> <value:string>", "更改当前群聊设置")
-    .usage("key 群聊设置的键名，enableKeywordTrigger或enableAt；value 设置的值，0禁用，1启用，default跟随默认设置")
+    .usage("key 群聊设置的键名，enableKeywordTrigger或enableAt或enableAtAll；value 设置的值，0禁用，1启用，default跟随默认设置")
     .action(async (argv, key, value) => {
       if(isPrivateMessage(argv.session.channelId)) return;
 
@@ -606,7 +610,7 @@ function registerCommands() {
         return;
       }
 
-      if (!["enableKeywordTrigger", "enableAt"].includes(key)) {
+      if (!["enableKeywordTrigger", "enableAt", "enableAtAll"].includes(key)) {
         replyMessage(argv.session, "无效的设置键名");
         return;
       }
@@ -639,7 +643,13 @@ function registerCommands() {
         });
       }
 
-      replyMessage(argv.session, `群聊设置已更新：${key}已设为${value === "default" ? `默认(${store.config[key] === "0" ? "禁用" : "启用"})` : value === "0" ? "禁用" : "启用"}`);
+      const groupDefaultSettingsKey = {
+        enableKeywordTrigger: "groupDefaultEnableKeywordTrigger",
+        enableAt: "groupDefaultEnableAt",
+        enableAtAll: "groupDefaultEnableAtAll",
+      }
+
+      replyMessage(argv.session, `群聊设置已更新：${key}已设为${value === "default" ? `默认(${store.config[groupDefaultSettingsKey[key]] === "0" ? "禁用" : "启用"})` : value === "0" ? "禁用" : "启用"}`);
     });
 
   // 群聊设置恢复默认
@@ -662,7 +672,8 @@ function registerCommands() {
         store.groupManager.setGroup(argv.session.platform, argv.session.channelId, {
           settings: {
             enableKeywordTrigger: "",
-            enableAt: ""
+            enableAt: "",
+            enableAtAll: ""
           }
         });
       }

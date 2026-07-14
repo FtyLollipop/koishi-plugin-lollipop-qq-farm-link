@@ -20,9 +20,12 @@ function registerEvents() {
         ? "1"
         : "0",
       enableAt: store.config.groupDefaultEnableAt ? "1" : "0",
+      enableAtAll: store.config.groupDefaultEnableAtAll ? "1" : "0",
     };
     groupSettings.enableAt =
       groupSettings.enableAt || (store.config.groupDefaultEnableAt ? "1" : "0");
+    groupSettings.enableAtAll =
+      groupSettings.enableAtAll || (store.config.groupDefaultEnableAtAll ? "1" : "0");
     if (groupSettings.enableKeywordTrigger === "0") return;
 
     const keywords = store.userManager.getUser(
@@ -50,9 +53,14 @@ function registerEvents() {
           }
 
           if (store.config.enableAt && groupSettings.enableAt === "1" && keywordObj.enableAt === "1") {
-            let subscribers = (group?.subscribers || []).filter(
-              (e) => e !== session.userId,
-            );
+            let subscribers = []
+            if(groupSettings.enableAtAll === "1") {
+              subscribers = (await getGuildMemberList(session.platform, session.channelId)).map((member) => member.user.id).filter(id => id !== session.userId);
+            } else {
+              subscribers = (group?.subscribers || []).filter(
+                (e) => e !== session.userId,
+              );
+            }
             if (subscribers.length > 0) {
               // 每超过100条分一条消息，否则at会失效
               for (let i = 0; i < subscribers.length; i += 100) {
@@ -74,7 +82,7 @@ function registerEvents() {
           if (keywordObj.scope === "1") {
             replyMessage(
               session,
-              `${username}的农场链接为：\n${store.config.urlPrefix}${user.farmId}\n手机QQ点击链接即可快速跳转到ta的农场`,
+              `${username}的农场链接为：\n${user.farmId ? `${store.config.urlPrefix}${user.farmId}` : "未绑定农场链接"}\n手机QQ点击链接即可快速跳转到ta的农场`,
             );
           } else if (keywordObj.scope === "2" || keywordObj.scope === "3") {
             for (const lu of linkedUsers) {

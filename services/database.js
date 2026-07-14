@@ -99,6 +99,7 @@ class Database {
       settings: settings || {
         enableKeywordTrigger: "",
         enableAt: "",
+        enableAtAll: ""
       },
       subscribers: subscribers || [],
     });
@@ -111,6 +112,7 @@ class Database {
       { platform, channelId, settings: settings || {
         enableKeywordTrigger: "",
         enableAt: "",
+        enableAtAll: ""
       }, subscribers: subscribers || [] },
     );
   }

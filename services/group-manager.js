@@ -20,8 +20,9 @@ class GroupManager {
       this.#groups.set(`${group.platform}:${group.channelId}`, {
         ...group,
         settings: {
-          enableKeywordTrigger: group.settings.enableKeywordTrigger || "",
-          enableAt: group.settings.enableAt || ""
+          enableKeywordTrigger: group.settings?.enableKeywordTrigger || "",
+          enableAt: group.settings?.enableAt || "",
+          enableAtAll: group.settings?.enableAtAll || ""
         },
       });
     });
@@ -81,7 +82,8 @@ class GroupManager {
           channelId,
           settings: {
             enableKeywordTrigger: settings?.enableKeywordTrigger ?? "",
-            enableAt: settings?.enableAt ?? ""
+            enableAt: settings?.enableAt ?? "",
+            enableAtAll: settings?.enableAtAll ?? ""
           },
           subscribers: validSubscribers || []
         });
@@ -93,6 +95,7 @@ class GroupManager {
         settings: {
           enableKeywordTrigger: settings?.enableKeywordTrigger ?? group.settings.enableKeywordTrigger,
           enableAt: settings?.enableAt ?? group.settings.enableAt,
+          enableAtAll: settings?.enableAtAll ?? group.settings.enableAtAll,
         }
       }
       if(isGroupEntryEmpty(newGroupEntry)) {
