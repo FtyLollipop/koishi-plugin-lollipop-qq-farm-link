@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-lollipop-qq-farm-link",
   "description": "A Koishi plugin for binding and sending QQ Classic Farm links",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "contributors": [
     "FtyLollipop <ftylollipop@outlook.com>"

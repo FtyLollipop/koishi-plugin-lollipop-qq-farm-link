@@ -25,26 +25,24 @@ function registerEvents() {
       groupSettings.enableAt || (store.config.groupDefaultEnableAt ? "1" : "0");
     if (groupSettings.enableKeywordTrigger === "0") return;
 
-    const keywords = store.keywordsManager.getKeywords(
+    const keywords = store.userManager.getUser(
       session.platform,
       session.userId,
-    );
+    )?.keywords;
     if (keywords) {
       for (const keywordObj of keywords) {
         if (compareContent(keywordObj.keyword, session.content)) {
-          const user = (
-            await store.db.getUsers(session.platform, session.userId)
-          )[0];
+          const user = store.userManager.getUser(session.platform, session.userId);
           const linkedUsers = [];
           if (keywordObj.scope === "1") {
           } else if (keywordObj.scope === "2" || keywordObj.scope === "3") {
             for (const lu of user.linkedUsers) {
-              const linkedUserEntries = await store.db.getUsers(
+              const linkedUserEntry = store.userManager.getUser(
                 session.platform,
                 lu,
               );
-              if (linkedUserEntries && linkedUserEntries.length > 0) {
-                linkedUsers.push(linkedUserEntries[0]);
+              if (linkedUserEntry) {
+                linkedUsers.push(linkedUserEntry);
               } else {
                 linkedUsers.push({userId: lu, farmId: ""});
               }
@@ -88,7 +86,7 @@ function registerEvents() {
             if (keywordObj.scope === "2") {
               replyMessage(
                 session,
-                `${username}的关联用户农场链接如下，手机QQ点击链接即可快速跳转到ta的农场：\n${linkedUserListMessage}`,
+                `${username}的关联用户农场链接如下，手机QQ点击链接即可快速跳转到对应的农场：\n${linkedUserListMessage}`,
               );
             } else if (keywordObj.scope === "3") {
               replyMessage(

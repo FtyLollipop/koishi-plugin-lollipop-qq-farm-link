@@ -30,9 +30,8 @@ function registerCommands() {
 
       const username = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, targetUserId);
-      const entryId = entries?.[0]?.id ?? undefined;
-      if(entryId && entries[0].farmId) {
+      const userData = store.userManager.getUser(argv.session.platform, targetUserId);
+      if(userData && userData.farmId) {
         replyMessage(argv.session, `${userId === targetUserId ? "你" : username}已经绑定农场链接，请勿重复绑定`);
         return;
       }
@@ -46,18 +45,9 @@ function registerCommands() {
             const url = cardData?.meta?.detail_1?.url
             if(url) {
               const farmId = url.replace(store.config.urlPrefix, "");
-              if(entryId) {
-                store.db.updateUser({
-                  ...entries[0],
-                  farmId: farmId,
-                });
-              } else {
-                store.db.saveUser({
-                  platform: argv.session.platform,
-                  userId: targetUserId,
-                  farmId: farmId,
-                });
-              }
+              store.userManager.setUser(argv.session.platform, targetUserId, {
+                farmId: farmId,
+              });
               replyMessage(argv.session, "绑定成功");
               return
             }
@@ -91,21 +81,15 @@ function registerCommands() {
 
       const username = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, targetUserId);
-      if(entries.length === 0 || !entries[0].farmId) {
+      const userData = store.userManager.getUser(argv.session.platform, targetUserId);
+      if(!userData || !userData.farmId) {
         replyMessage(argv.session, `${argv.session.userId === targetUserId ? "你" : username}还没有绑定农场链接`);
         return;
       }
 
-      const newUserEntry = {
-        ...entries[0],
+      store.userManager.setUser(argv.session.platform, targetUserId, {
         farmId: "",
-      }
-      if(isUserEntryEmpty(newUserEntry)) {
-        store.db.deleteUserById(entries[0].id);
-      } else {
-        store.db.updateUser(newUserEntry);
-      }
+      });
 
       replyMessage(argv.session, `${argv.session.userId === targetUserId ? "你" : username}的农场链接已解绑`);
     });
@@ -128,16 +112,13 @@ function registerCommands() {
 
       const username = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, targetUserId);
-      const entryId = entries?.[0]?.id ?? undefined;
-      if(!entryId || !entries[0].farmId) {
+      const userData = store.userManager.getUser(argv.session.platform, targetUserId);
+      if(!userData || !userData.farmId) {
         replyMessage(argv.session, `${argv.session.userId === targetUserId ? "你" : username}还没有绑定农场链接`);
         return;
       }
 
-      const farmId = entries[0].farmId;
-      const url = `${store.config.urlPrefix}${farmId}`;
-      replyMessage(argv.session, `${username}的农场链接为：\n${url}\n手机QQ点击链接即可快速跳转到ta的农场`);
+      replyMessage(argv.session, `${username}的农场链接为：\n${store.config.urlPrefix}${userData.farmId}\n手机QQ点击链接即可快速跳转到ta的农场`);
     });
 
   // 关联用户
@@ -183,29 +164,25 @@ function registerCommands() {
       const linkUsername = (await getUserInfo(argv.session.platform, linkUserId))?.name ?? "该用户";
       const targetUsername = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该子用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, targetUserId);
-      const entryId = entries?.[0]?.id ?? undefined;
+      const userData = store.userManager.getUser(argv.session.platform, targetUserId);
 
-      if(entryId && entries[0].linkedUsers.includes(linkUserId)) {
-        replyMessage(argv.session, `${userId === targetUserId ? "你" : targetUsername}已经关联了${linkUserId === targetUserId ? "自己" : linkUsername}，请勿重复关联`);
+      if(userData) {
+        if(userData.linkedUsers.includes(linkUserId)) {
+          replyMessage(argv.session, `${userId === targetUserId ? "你" : targetUsername}已经关联了${linkUserId === targetUserId ? "自己" : linkUsername}，请勿重复关联`);
         return;
+        }
+        if(userData.linkedUsers.length >= store.config.linkUserLimit) {
+          replyMessage(argv.session, `${userId === targetUserId ? "你" : targetUsername}的关联用户数量已达上限，无法再添加新的关联用户`);
+          return;
+        }
       }
 
       replyMessage(argv.session, `请在${store.config.addLinkUserWaitTime}秒内使用${linkUsername}(${linkUserId})用户在任意包含机器人的会话中发送主用户的QQ号(${targetUserId})以完成关联，发送其他内容或超时将取消关联`);
       registerMessageEventOnce(argv.session.platform, undefined, linkUserId, (session) => {
         if(session.content && session.content === targetUserId) {
-          if(entryId) {
-            store.db.updateUser({
-              ...entries[0],
-              linkedUsers: [...entries[0].linkedUsers, linkUserId],
-            });
-          } else {
-            store.db.saveUser({
-              platform: argv.session.platform,
-              userId: targetUserId,
-              linkedUsers: [linkUserId],
-            });
-          }
+          store.userManager.setUser(argv.session.platform, targetUserId, {
+            linkedUsers: [...(userData?.linkedUsers ?? []), linkUserId],
+          });
           replyMessage(session, `你已成功被主用户${targetUsername}(${targetUserId})关联`);
           replyMessage(argv.session, `${userId === targetUserId ? "你" : targetUsername}已成功关联子用户${linkUsername}`);
         } else {
@@ -240,22 +217,16 @@ function registerCommands() {
       const linkUsername = (await getUserInfo(argv.session.platform, linkUserId))?.name ?? "该用户";
       const targetUsername = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该子用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, targetUserId);
+      const userData = await store.userManager.getUser(argv.session.platform, targetUserId);
 
-      if(entries.length === 0 || !entries[0]?.linkedUsers.includes(linkUserId)) {
+      if(!userData || !userData?.linkedUsers.includes(linkUserId)) {
         replyMessage(argv.session, `${userId === targetUserId ? "你" : targetUsername}没有关联${linkUsername}`);
         return;
       }
 
-      const newUserEntry = {
-        ...entries[0],
-        linkedUsers: entries[0].linkedUsers.filter(id => id !== linkUserId),
-      }
-      if(isUserEntryEmpty(newUserEntry)) {
-        store.db.deleteUserById(entries[0].id);
-      } else {
-        store.db.updateUser(newUserEntry);
-      }
+      store.userManager.setUser(argv.session.platform, targetUserId, {
+        linkedUsers: userData.linkedUsers.filter(id => id !== linkUserId),
+      });
 
       replyMessage(argv.session, `${userId === targetUserId ? "你" : targetUsername}已成功取消关联${linkUsername}`);
     })
@@ -282,22 +253,16 @@ function registerCommands() {
 
       const linkUsername = (await getUserInfo(argv.session.platform, linkUserId))?.name ?? "该用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, linkUserId);
+      const userData = store.userManager.getUser(argv.session.platform, linkUserId);
 
-      if(entries.length === 0 || !entries[0]?.linkedUsers.includes(userId)) {
+      if(!userData || !userData?.linkedUsers.includes(userId)) {
         replyMessage(argv.session, `你没有被${linkUsername}关联`);
         return;
       }
 
-      const newUserEntry = {
-        ...entries[0],
-        linkedUsers: entries[0].linkedUsers.filter(id => id !== userId),
-      }
-      if(isUserEntryEmpty(newUserEntry)) {
-        store.db.deleteUserById(entries[0].id);
-      } else {
-        store.db.updateUser(newUserEntry);
-      }
+      store.userManager.setUser(argv.session.platform, linkUserId, {
+        linkedUsers: userData.linkedUsers.filter(id => id !== userId),
+      });
 
       replyMessage(argv.session, `你已成功取消被${linkUsername}关联`);
     });
@@ -322,23 +287,19 @@ function registerCommands() {
 
       const targetUsername = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该用户";
 
-      const entries = await store.db.getUsers(argv.session.platform, targetUserId);
+      const userData = store.userManager.getUser(argv.session.platform, targetUserId);
 
-      if(entries.length === 0) {
-        replyMessage(argv.session, `${targetUsername}没有关联任何用户`);
+      const linkedUsers = userData?.linkedUsers || [];
+      if(!userData || linkedUsers.length === 0) {
+        replyMessage(argv.session, `${targetUserId === userId ? '你' : targetUsername}没有关联任何用户`);
         return;
       }
 
-      const linkedUsers = entries[0].linkedUsers;
-      if(linkedUsers.length === 0) {
-        replyMessage(argv.session, `${targetUsername}没有关联任何用户`);
-        return;
-      }
+      const linkedUserInfo = await Promise.all(linkedUsers.map(id => getUserInfo(argv.session.platform, id)));
 
-      const linkedUsernames = await Promise.all(linkedUsers.map(id => getUserInfo(argv.session.platform, id)));
-      const linkedNames = linkedUsernames.map(user => user?.name ?? "子用户");
+      const isPrivate = isPrivateMessage(argv.session.channelId);
 
-      replyMessage(argv.session, `${targetUsername}关联的用户有：<message forward><message>${linkedNames.join("\n")}</message></message>`);
+      replyMessage(argv.session, `${targetUsername}关联的用户有：<message forward><message>${linkedUserInfo.map(user => `${user?.name ?? "子用户"}${isPrivate ? `(${user.id})` : ""}`).join("\n")}</message></message>`);
     });
 
   // 添加关键词
@@ -368,8 +329,9 @@ function registerCommands() {
         }
       }
 
+      const userData = store.userManager.getUser(argv.session.platform, targetUserId);
 
-      if(store.keywordsManager.getKeywords(argv.session.platform, targetUserId)?.length >= store.config.keywordsLimit) {
+      if(userData && userData.keywords.length >= store.config.keywordsLimit) {
         const username = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该用户";
         replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}的关键词数量已达上限（${store.config.keywordsLimit}个），无法继续添加`);;
         return;
@@ -378,12 +340,11 @@ function registerCommands() {
       replyMessage(argv.session, `请在${store.config.addKeywordWaitTime}秒内发送需要添加的关键词，超时将取消添加`);
       registerMessageEventOnce(argv.session.platform, argv.session.channelId, argv.session.userId, (session) => {
         const keyword = session.content
-        const keywords = store.keywordsManager.getKeywords(argv.session.platform, targetUserId);
         if(!contentIsLagal(keyword)) {
           replyMessage(argv.session, "关键词仅支持文字、图片和表情，添加操作已取消");
           return;
         }
-        if(keywords && keywords.some(keywordObj => compareContent(keywordObj.keyword, keyword))) {
+        if(userData && userData.keywords.some(keywordObj => compareContent(keywordObj.keyword, keyword))) {
           replyMessage(argv.session, "关键词已存在，添加操作已取消");
           return;
         }
@@ -391,10 +352,10 @@ function registerCommands() {
         registerMessageEventOnce(argv.session.platform, argv.session.channelId, argv.session.userId, (session) => {
           const enableAtResponse = session.content;
           const enableAt = enableAtResponse === "是" ? "1" : "0";
-          store.keywordsManager.addKeyword(argv.session.platform, targetUserId, {keyword, enableAt, scope: scopeValue});
+          store.userManager.setUser(argv.session.platform, targetUserId, {keywords: [...(userData?.keywords || []), {keyword, enableAt, scope: scopeValue}]});
           replyMessage(argv.session, `关键词添加成功\n范围：${scopeValue === "1" ? "主用户" : scopeValue === "2" ? "全部子用户" : "主用户和全部子用户"}\n是否at订阅用户：${enableAt === "1" ? "是" : "否"}`);
         }, store.config.addKeywordWaitTime * 1000, () => {
-          store.keywordsManager.addKeyword(argv.session.platform, targetUserId, {keyword, enableAt: "0", scope: scopeValue});
+          store.userManager.setUser(argv.session.platform, targetUserId, {keywords: [...(userData?.keywords || []), {keyword, enableAt: "0", scope: scopeValue}]});
           replyMessage(argv.session, `关键词添加成功\n范围：${scopeValue === "1" ? "主用户" : scopeValue === "2" ? "全部子用户" : "主用户和全部子用户"}\n是否at订阅用户：否`);
         });
       }, store.config.addKeywordWaitTime * 1000, () => {
@@ -422,13 +383,13 @@ function registerCommands() {
         }
       }
 
-      const keywords = store.keywordsManager.getKeywords(argv.session.platform, targetUserId);
+      const keywords = store.userManager.getUser(argv.session.platform, targetUserId)?.keywords;
       if(!keywords || index < 1 || index > keywords.length) {
         replyMessage(argv.session, "无效的关键词序号");
         return;
       }
 
-      const success = await store.keywordsManager.removeKeyword(argv.session.platform, targetUserId, index - 1);
+      const success = await store.userManager.setUser(argv.session.platform, targetUserId, {keywords: keywords.filter((_, i) => i !== index - 1)});
       if(success) {
         replyMessage(argv.session, "关键词删除成功");
       } else {
@@ -456,7 +417,7 @@ function registerCommands() {
         }
       }
 
-      const success = await store.keywordsManager.clearKeywords(argv.session.platform, targetUserId);
+      const success = await store.userManager.setUser(argv.session.platform, targetUserId, {keywords: []});
       if(success) {
         replyMessage(argv.session, "所有关键词清除成功");
       } else {
@@ -484,12 +445,12 @@ function registerCommands() {
         }
       }
 
-      const keywords = store.keywordsManager.getKeywords(argv.session.platform, targetUserId) || [];
-      const username = (await store.db.getUsers(argv.session.platform, targetUserId))[0]?.username || "该用户";
+      const keywords = store.userManager.getUser(argv.session.platform, targetUserId)?.keywords ?? [];
+      const username = (await getUserInfo(argv.session.platform, targetUserId))?.name ?? "该用户";
       if(keywords.length === 0) {
         replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}尚未设置任何关键词`);
       } else {
-        const keywordList = keywords.map((k, index) => `<message>${index + 1}. 发送范围：${k.scope === "1" ? "主用户" : k.scope === "2" ? "全部子用户" : "主用户和全部子用户"}，是否at全体成员：${k.enableAt ? "是" : "否"}\n关键词内容：\n${k.keyword}</message>`).join("");
+        const keywordList = keywords.map((k, index) => `<message>${index + 1}. 发送范围：${k.scope === "1" ? "主用户" : k.scope === "2" ? "全部子用户" : "主用户和全部子用户"}，是否at全体成员：${k.enableAt === "0" ? "否" : "是"}\n关键词内容：\n${k.keyword}</message>`).join("");
         let message = `${targetUserId === argv.session.userId ? "你的" : username + "的"}关键词列表：\n<message forward>${keywordList}</message>`;
         replyMessage(argv.session, message);
       }
@@ -517,12 +478,14 @@ function registerCommands() {
         }
       }
 
+      const username = (await getUserInfo(argv.session.platform, targetUserId))?.name || "该用户";
+
       const groupEntry = store.groupManager.getGroup(argv.session.platform, argv.session.channelId);
       if(!groupEntry) {
         store.groupManager.setGroup(argv.session.platform, argv.session.channelId, {
           subscribers: [targetUserId],
         });
-        replyMessage(argv.session, "你已成功订阅本群关键词at，当本群有关键词触发时会at你");
+        replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}已成功订阅本群关键词at，当本群有关键词触发时会at${targetUserId === argv.session.userId ? "你" : " ta"}`);
         return;
       }
 
@@ -532,9 +495,9 @@ function registerCommands() {
         store.groupManager.setGroup(argv.session.platform, argv.session.channelId, {
           subscribers,
         });
-        replyMessage(argv.session, "你已成功订阅本群关键词at，当本群有关键词触发时会at你");
+        replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}已成功订阅本群关键词at，当本群有关键词触发时会at${targetUserId === argv.session.userId ? "你" : " ta"}`);
       } else {
-        replyMessage(argv.session, "你已订阅过本群关键词at，请勿重复订阅");
+        replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}已订阅过本群关键词at，请勿重复订阅`);
       }
     });
 
@@ -560,9 +523,11 @@ function registerCommands() {
         }
       }
 
+      const username = (await getUserInfo(argv.session.platform, targetUserId))?.name || "该用户";
+
       const groupEntry = store.groupManager.getGroup(argv.session.platform, argv.session.channelId);
       if(!groupEntry) {
-        replyMessage(argv.session, "你未订阅本群关键词at");
+        replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}未订阅本群关键词at`);
         return;
       }
 
@@ -576,9 +541,9 @@ function registerCommands() {
           settings: groupEntry.settings || {},
           subscribers,
         });
-        replyMessage(argv.session, "你已成功取消订阅本群关键词at，本群有关键词触发时将不再at你");
+        replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}已成功取消订阅本群关键词at，本群有关键词触发时将不再at${targetUserId === argv.session.userId ? "你" : " ta"}`);
       } else {
-        replyMessage(argv.session, "你未订阅本群关键词at");
+        replyMessage(argv.session, `${targetUserId === argv.session.userId ? "你" : username}未订阅本群关键词at`);
       }
     });
 
@@ -716,7 +681,7 @@ function registerCommands() {
         return;
       }
 
-      await store.keywordsManager.loadKeywordsFromDatabase();
+      await store.userManager.loadKeywordsFromDatabase();
       await store.groupManager.loadGroupsFromDatabase();
       replyMessage(argv.session, "内存数据已从数据库重载");
     });

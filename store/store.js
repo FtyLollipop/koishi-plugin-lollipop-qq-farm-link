@@ -3,7 +3,7 @@ class Store {
     this.ctx = null;
     this.config = null;
     this.db = null;
-    this.keywordsManager = null;
+    this.userManager = null;
     this.groupManager = null;
   }
 }

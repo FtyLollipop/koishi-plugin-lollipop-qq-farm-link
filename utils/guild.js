@@ -54,7 +54,7 @@ async function getGuildList(platform) {
   const bot = store.ctx.bots.filter((bot) => bot.platform === platform)[0];
   if (bot) {
     try {
-      const guildList = await bot.getGuildList()
+      const guildList = (await bot.getGuildList()).data ?? null;
       return guildList ?? null;
     } catch (e) {
       store.ctx.logger.error(`获取群列表失败: \n${e}`);

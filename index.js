@@ -1,7 +1,7 @@
 const { Schema } = require("koishi");
 const store = require("./store/store");
 const Database = require("./services/database");
-const KeywordsManager = require("./services/keywords-manager")
+const UserManager = require("./services/user-manager")
 const GroupManager = require("./services/group-manager")
 const { registerCommands } = require("./commands/commands");
 const { registerEvents } = require("./events/events");
@@ -15,6 +15,7 @@ const defaultConfig = {
   enableAt: true,
   strictKeywordImageType: false,
   keywordsLimit: 10,
+  linkUserLimit: 20,
   bindFarmLinkWaitTime: 60,
   addLinkUserWaitTime: 60,
   addKeywordWaitTime: 60,
@@ -37,6 +38,9 @@ const Config = Schema.intersect([
     keywordsLimit: Schema.number()
       .default(defaultConfig.keywordsLimit)
       .description("每用户关键词数量限制"),
+    linkUserLimit: Schema.number()
+      .default(defaultConfig.linkUserLimit)
+      .description("每用户关联用户数量限制"),
     strictKeywordImageType: Schema.boolean()
       .default(defaultConfig.strictKeywordImageType)
       .description("是否严格匹配关键词中的图片类型（图片/表情图片）"),
@@ -70,7 +74,7 @@ function apply(ctx, config) {
   store.db = new Database(ctx);
 
   // 初始化关键词列表
-  store.keywordsManager = new KeywordsManager(store.db);
+  store.userManager = new UserManager(store.db);
   // 初始化群设置列表
   store.groupManager = new GroupManager(store.db);
 
