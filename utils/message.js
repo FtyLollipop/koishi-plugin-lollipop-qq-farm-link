@@ -17,12 +17,12 @@ function parseCardMessage(msg) {
 // 撤回消息
 function recallMessage(platform, channelId, messageId) {
   const bot = store.ctx.bots.filter((bot) => bot.platform === platform)[0];
-  bot.deleteMessage(channelId, messageId);
+  return bot.deleteMessage(channelId, messageId);
 }
 
 // 回复消息
-async function replyMessage(session, message) {
-  return await session.send(
+function replyMessage(session, message) {
+  return session.send(
     `<quote id="${session.event.message.id}"/>${message}`,
   );
 }

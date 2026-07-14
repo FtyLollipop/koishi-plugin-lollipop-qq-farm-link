@@ -62,16 +62,18 @@ function registerEvents() {
               );
             }
             if (subscribers.length > 0) {
+              const atMessageList = []
               // 每超过100条分一条消息，否则at会失效
               for (let i = 0; i < subscribers.length; i += 100) {
                 const batch = subscribers.slice(i, i + 100);
-                replyMessage(
+                atMessageList.push(replyMessage(
                   session,
                   batch
                     .map((subscriber) => `<at id="${subscriber}" name=" "/>`)
                     .join(""),
-                );
+                ));
               }
+              await Promise.all(atMessageList)
             }
           }
 
