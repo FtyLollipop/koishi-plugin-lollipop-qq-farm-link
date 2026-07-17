@@ -692,7 +692,7 @@ function registerCommands() {
         return;
       }
 
-      await store.userManager.loadKeywordsFromDatabase();
+      await store.userManager.loadUsersFromDatabase();
       await store.groupManager.loadGroupsFromDatabase();
       replyMessage(argv.session, "内存数据已从数据库重载");
     });
