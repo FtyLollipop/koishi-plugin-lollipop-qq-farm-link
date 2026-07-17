@@ -22,6 +22,7 @@
   ],
   "devDependencies": {},
   "koishi": {
+    "category": "gametool",
     "description": {
       "en": "A Koishi plugin for binding and sending QQ Classic Farm links",
       "zh": "用户可绑定QQ经典农场链接，发送链接后点击快速跳转到相应用户的农场中"
